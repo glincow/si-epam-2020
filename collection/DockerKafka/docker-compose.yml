@@ -4,16 +4,12 @@ services:
   zookeeper:
     image: wurstmeister/zookeeper
     container_name: zookeeper
-    networks:
-      - kafkanet
     ports:
-      - "2181:2181"
-  kafka:
+    - "2181:2181"
+  kafkaserver:
     image: wurstmeister/kafka
-    container_name: kafka
+    container_name: kafkaserver
     hostname: kafkaserver
-    networks:
-      - kafkanet
     ports:
       - "9092:9092"
     environment:
@@ -22,7 +18,29 @@ services:
       KAFKA_ADVERTISED_HOST_NAME: kafkaserver
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       ADVERTISED_PORT: 9092
-
-networks:
-  kafkanet:
-    driver: bridge
+  spark-master:
+    image: singularities/spark
+    container_name: spark-master
+    command: start-spark master
+    hostname: spark-master
+    links:
+      - kafkaserver
+    ports:
+      - "6066:6066"
+      - "7070:7070"
+      - "9099:8080"
+      - "4040:4040"
+    volumes:
+      - //c/Users/User/Desktop/SparkJob:/tmp
+  spark-worker-1:
+    image: singularities/spark
+    container_name: spark-worker-1
+    command: start-spark worker spark-master
+    ports:
+    - "8081:8081"
+    - "4041:4040"
+    environment:
+      SPARK_WORKER_CORES: 1
+      SPARK_WORKER_MEMORY: 1g
+    links:
+      - spark-master
