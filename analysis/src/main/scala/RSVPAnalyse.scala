@@ -1,16 +1,21 @@
+import java.util.Properties
+
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.from_json
 import org.apache.spark.sql.types.{DataTypes, DoubleType, LongType, StringType, StructType}
 
+import scala.io.Source
+
 object RSVPAnalyse {
   def main(args: Array[String]): Unit = {
-    val appName = "RSVP Analyse"
-    val bootstrapAddress = "kafkaserver:9092"
-    val topicName = "data_test"
+    val url = getClass.getResource("application.properties")
+    val properties: Properties = new Properties()
+    val source = Source.fromURL(url)
+    properties.load(source.bufferedReader())
 
     val spark: SparkSession = SparkSession
       .builder.master("local")
-      .appName(appName)
+      .appName(properties.getProperty("spark.appName"))
       .getOrCreate()
 
     import spark.implicits._
@@ -54,8 +59,8 @@ object RSVPAnalyse {
           .add("group_urlname", StringType))
 
     val streamingInputDF = spark.readStream.format("kafka")
-      .option("kafka.bootstrap.servers", bootstrapAddress)
-      .option("subscribe", topicName)
+      .option("kafka.bootstrap.servers", properties.getProperty("kafka.bootstrapAddress"))
+      .option("subscribe", properties.getProperty("kafka.topicName"))
       .load()
 
     val personStringDF = streamingInputDF.selectExpr("CAST(value AS STRING)")
